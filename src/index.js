@@ -1,44 +1,9 @@
 //@ts-check
 const { parseType } = require('./parsing/parser')
+const { addDefaults, defaultTypes } = require('./default')
 /**
  * @import {typecheck, typeEnvironment} from "./parsing/parser" 
  */
-/**
- * @type {{[x: string]: typecheck}}
- */
-const defaultTypes =  {
-    "string": {
-        check: (v) => typeof v === 'string'
-    },
-    "number": {
-        check: (v) => typeof v === 'number'
-    },
-    "object": {
-        check: (v) => typeof v === 'object' && v != null
-    },
-    "boolean": {
-        check: (v) => typeof v === 'boolean'
-    },
-    "any": {
-        check: (v) => true
-    },
-    "Less": {
-        check: (v, env) => typeof v === 'number' && v < (env.types.V?.raw ?? Number.NaN),
-        params: ['V'],
-    },
-    "Greater": {
-        check: (v, env) => typeof v === 'number' && v > (env.types.V?.raw ?? Number.NaN),
-        params: ['V']
-    },
-    "Shorter": {
-        check: (v, env) => typeof v === 'string' && v.length < (env.types.V?.raw ?? Number.NaN),
-        params: ['V']
-    },
-    "Longer": {
-        check: (v, env) => typeof v === 'string' && v.length > (env.types.V?.raw ?? Number.NaN),
-        params: ['V'],
-    }
-}
 
 /**
  * 
@@ -68,7 +33,7 @@ const createEnvironemt = (types = defaultTypes) => ({
 })
 
 const defaultenv = createEnvironemt()
-defaultenv.parseType('T[]', 'Array', 'T')
+addDefaults(defaultenv)
 
 module.exports = {
     defaultenv,

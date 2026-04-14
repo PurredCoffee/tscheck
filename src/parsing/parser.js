@@ -1,8 +1,5 @@
 //@ts-check
 /**
- * @import {typestr} from "../types"
- */
-/**
  * @typedef {{
  *  params?: string[],
  *  check: (v: any, env: typeEnvironment) => boolean,
@@ -14,7 +11,7 @@
  *  types: {[x: string]: typecheck},
  *  infertypes: {[x: string]: typecheck},
  *  check(str: string, value: any): boolean,
- *  parseType(str: typestr, name?: string, ...paramNames: string[]): (value: any) => boolean
+ *  parseType(str: string, name?: string, ...paramNames: string[]): (value: any) => boolean
  * }} typeEnvironment
  */
 /**
@@ -80,13 +77,44 @@ function parseReg(typestr) {
  */
 function parseObject(typestr) {
     typestr = typestr.substring(1).trimStart()
+    if(typestr[0] == '[') {
+        const name = paramReg.exec(typestr)
+        if (!name) throw new Error('could not parse Property? ' + typestr.substring(0, 20))
+        typestr = typestr.substring(name[0].length).trimStart()
+        if(typestr[0] != ':') throw new Error('property is improperly defined!')
+        typestr = typestr.substring(1)
+        let t = parseType(typestr)
+        typestr = t.restStr.trimStart()
+        if(typestr[0] != ']') throw Error('accessor is not closed!');
+        typestr = typestr.substring(1).trimStart()
+        if(typestr[0] != ':') throw new Error('property is improperly defined!')
+        typestr = typestr.substring(1)
+        let vt = parseType(typestr)
+        typestr = t.restStr.trimStart()
+        if(typestr[0] != '}') throw Error('Object cannot define both an accessor and other properties');
+        return {
+            restStr: typestr.substring(1),
+            check: (v, env) => Object.keys(v).every(p => {
+                let ret = true
+                let numberbak = env.types['number'];
+                env.types['number'] = {
+                    check: (v) => Number(v) != Number.NaN
+                }
+                let check = t.check(p, env);
+                //@ts-ignore
+                env.types['number'] = numberbak;
+                if(check) ret = vt?.check(v?.[p], env)
+                return ret
+            }),
+            raw: "[" + t.raw + "]:" + vt.raw 
+        }
+    }
     /**
      * @type {{[x: string]: typecomp}}
      */
     const testValues = {}
     while(typestr[0] != '}') {
         if(!typestr) throw Error('Object was not closed')
-        if(typestr[0] == '[') throw Error('Object accessor not implemented TODO')
         const name = paramReg.exec(typestr)
         if (!name) throw new Error('could not parse Property? ' + typestr.substring(0, 20))
         typestr = typestr.substring(name[0].length).trimStart()
