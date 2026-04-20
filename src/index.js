@@ -32,9 +32,19 @@ const createEnvironemt = (types = defaultTypes) => ({
         const p = this
         const ret = {
             params: paramNames,
+            /**
+             * 
+             * @param {any} v 
+             * @returns 
+             */
             check: (v) => t.check(v, p),
-            throw: (v) => {
-                if(!t.check(v, this)) throw TypeError("value: '" + inspect(v, false, null, false) + "' has the following problems: " + t.throw(v, p)?.trimStart())
+            /**
+             * 
+             * @param {any} v 
+             * @param {string} name 
+             */
+            throw: (v, name="value") => {
+                if(!t.check(v, this)) throw TypeError(`${name}: '${inspect(v, false, null, false)}' has the following problems: ${t.throw(v, p)?.trimStart()}`)
             }
         }
         if(ret.params.length == 0) this.cache[str] = ret
@@ -46,8 +56,24 @@ const createEnvironemt = (types = defaultTypes) => ({
             }
         }
         return ret
+    },
+    //@ts-ignore
+    wrapFunction(params, func) {
+        const overriden = params.map(v => this.throw(typeof v == 'string'?v:v[0]));
+        /**
+         * @param {Parameters<typeof func>} args
+         */
+        return function verifyArgs(...args) {
+            try {
+                overriden.forEach((v, i) => v(args[i], params[i]?.[1] ?? "value"))
+            } catch(e) {
+                throw e;
+            }
+            return func(...args);
+        } 
     }
 })
+
 
 const defaultenv = createEnvironemt()
 addDefaults(defaultenv)

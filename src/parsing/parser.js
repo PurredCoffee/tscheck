@@ -12,17 +12,18 @@
  *  types: {[x: string]: typecheck},
  *  infertypes: {[x: string]: typecheck},
  *  check(str: string): (value: any) => boolean,
- *  throw(str: string): (value: any) => void,
+ *  throw(str: string): (value: any, name?: string) => void,
  *  parseType(str: string, name?: string, ...paramNames: string[]): {
  *   params?: string[],
  *   check: (v: any) => boolean,
- *   throw: (v: any) => void,
+ *   throw: (v: any, name?: string) => void,
  *  },
  *  cache: {[key: string]: {
  *   params?: string[],
  *   check: (v: any) => boolean,
- *   throw: (v: any) => void,
- *  }}
+ *   throw: (v: any, name?: string) => void,
+ *  }},
+ *  wrapFunction<T extends (...args: any) => any>(args: [string, string][], callback: T): T
  * }} typeEnvironment
  */
 /**
