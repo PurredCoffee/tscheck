@@ -1,6 +1,7 @@
 //@ts-check
 const { parseType } = require('./parsing/parser')
 const { addDefaults, defaultTypes } = require('./default')
+const { inspect } = require('util')
 /**
  * @import {typecheck, typeEnvironment} from "./parsing/parser" 
  */
@@ -13,22 +14,35 @@ const { addDefaults, defaultTypes } = require('./default')
 const createEnvironemt = (types = defaultTypes) => ({
     types,
     infertypes: {},
-    check(str, value) {
-        return parseType(str).check(value, this)
+    cache: {},
+    check(str) {
+        const t = parseType(str)
+        return (value) => t.check(value, this)
+    },
+    throw(str) {
+        const t = parseType(str)
+        return (value) => {
+            if(!t.check(value, this)) throw TypeError("value: '" + inspect(value, false, null, false) + "' is " + t.throw(value, this))
+        }
     },
     parseType(str, name, ...paramNames) {
-        const t = parseType(str)
+        if(this.cache[str]) return this.cache[str];
+        let t 
+        if(this.types[str]) {
+            t = this.types[str];
+        } else {
+            t = parseType(str)
+        }
+        const ret = this.cache[str] = {
+            params: paramNames,
+            check: (v) => t.check(v, p),
+            throw: (v) => t.throw(v, p)
+        }
+        const p = this
         if(name) {
-            this.types[name] = {
-                params: paramNames,
-                check: t.check,
-                raw: t.raw
-            }
+            this.types[name] = ret
         }
-        return (value) => {
-            this.infertypes = {}
-            return t.check(value, this)
-        }
+        return ret
     }
 })
 
