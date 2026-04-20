@@ -110,6 +110,7 @@ function parseReg(typestr) {
 function parseObject(typestr) {
     typestr = typestr.substring(1).trimStart()
     if(typestr[0] == '[') {
+        typestr = typestr.substring(1).trimStart()
         const name = paramReg.exec(typestr)
         if (!name) throw new Error('could not parse Property? ' + typestr.substring(0, 20))
         typestr = typestr.substring(name[0].length).trimStart()
@@ -122,7 +123,7 @@ function parseObject(typestr) {
         if(typestr[0] != ':') throw new Error('property is improperly defined!')
         typestr = typestr.substring(1)
         let vt = parseType(typestr)
-        typestr = t.restStr.trimStart()
+        typestr = vt.restStr.trimStart()
         if(typestr[0] != '}') throw Error('Object cannot define both an accessor and other properties')
         return {
             restStr: typestr.substring(1),
