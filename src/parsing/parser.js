@@ -16,12 +16,12 @@
  *  parseType(str: string, name?: string, ...paramNames: string[]): {
  *   params?: string[],
  *   check: (v: any) => boolean,
- *   throw: (v: any) => string | undefined,
+ *   throw: (v: any) => void,
  *  },
  *  cache: {[key: string]: {
  *   params?: string[],
  *   check: (v: any) => boolean,
- *   throw: (v: any) => string | undefined,
+ *   throw: (v: any) => void,
  *  }}
  * }} typeEnvironment
  */
@@ -50,9 +50,9 @@ function throwFalse(check, response) {
         check,
         throw: (...args) => {
             //@ts-ignore
-            if(!check(...args)) return response;
+            if(!check(...args)) return response
         }
-    };
+    }
 }
 /**
  * 
@@ -94,11 +94,11 @@ function parseNum(typestr) {
 function parseReg(typestr) {
     const reg = regReg.exec(typestr)
     if(!reg) throw new Error("not a properly defined regex: " + typestr.substring(0, 20))
-    const val = new RegExp(reg[0].substring(1, reg[0].length-1));
+    const val = new RegExp(reg[0].substring(1, reg[0].length-1))
     return {
         restStr: typestr.substring(reg[0].length),
         ...throwFalse((v) => typeof v === 'string' && val.test(v), ` !≡ /${reg[0]}/`),
-        raw: reg[0]
+        raw: "/" + reg[0] + "/"
     }
 }
 
@@ -117,43 +117,43 @@ function parseObject(typestr) {
         typestr = typestr.substring(1)
         let t = parseType(typestr)
         typestr = t.restStr.trimStart()
-        if(typestr[0] != ']') throw Error('accessor is not closed!');
+        if(typestr[0] != ']') throw Error('accessor is not closed!')
         typestr = typestr.substring(1).trimStart()
         if(typestr[0] != ':') throw new Error('property is improperly defined!')
         typestr = typestr.substring(1)
         let vt = parseType(typestr)
         typestr = t.restStr.trimStart()
-        if(typestr[0] != '}') throw Error('Object cannot define both an accessor and other properties');
+        if(typestr[0] != '}') throw Error('Object cannot define both an accessor and other properties')
         return {
             restStr: typestr.substring(1),
             check: (v, env) => Object.keys(v).every(p => {
                 let ret = true
-                let numberbak = env.types['number'];
+                let numberbak = env.types['number']
                 env.types['number'] = throwFalse((v) => Number(v) != Number.NaN, ` not of type number`)
-                let check = t.check(p, env);
+                let check = t.check(p, env)
                 //@ts-ignore
-                env.types['number'] = numberbak;
+                env.types['number'] = numberbak
                 if(check) ret = vt?.check(v?.[p], env)
                 return ret
             }),
             throw: (v, env) => {
                 const x = Object.keys(v).map(p => {
-                    let numberbak = env.types['number'];
+                    let numberbak = env.types['number']
                     env.types['number'] = throwFalse((v) => Number(v) != Number.NaN, ` not of type number`)
-                    let ret = t.throw(p, env);
+                    let ret = t.throw(p, env)
                     if(Boolean(ret)) ret = `[${p}${ret}]`
                     //@ts-ignore
-                    env.types['number'] = numberbak;
+                    env.types['number'] = numberbak
                     if(!Boolean(ret)) {
                         ret = vt?.throw(v?.[p], env)
                         if(Boolean(ret)) ret = `[${p}]${ret}`
                     }
-                    return ret;
-                }).filter(Boolean);
+                    return ret
+                }).filter(Boolean)
                 if(x.length == 1) {
                     return x[0]
                 } else if(x.length > 1) {
-                    return `(${x.join(" & ")})`;
+                    return `(${x.join(" & ")})`
                 }
             },
             raw: "[" + t.raw + "]:" + vt.raw 
@@ -184,12 +184,12 @@ function parseObject(typestr) {
         throw: (v, env) => {
             const x = Object.keys(testValues).map(p => {
                 const ret = testValues[p]?.throw(v?.[p], env)
-                if(ret) return `[${p}]${ret}`;
-            }).filter(Boolean);
+                if(ret) return `[${p}]${ret}`
+            }).filter(Boolean)
             if(x.length == 1) {
                 return x[0]
             } else if(x.length > 1) {
-                return `(${x.join(" & ")})`;
+                return `(${x.join(" & ")})`
             }
         },
         raw: Object.fromEntries(
@@ -225,12 +225,12 @@ function parseArray(typestr) {
             if(!Array.isArray(v)) return " is not of type Array"
             const x = testValues.map((p, i) => {
                 const ret = p?.throw(v?.[i], env)
-                if(ret) return `[${i}]${ret}`;
-            }).filter(Boolean);
+                if(ret) return `[${i}]${ret}`
+            }).filter(Boolean)
             if(x.length == 1) {
                 return x[0]
             } else if(x.length > 1) {
-                return `(${x.join(" & ")})`;
+                return `(${x.join(" & ")})`
             }
         },
         raw: testValues.map(v => v.raw)
@@ -339,7 +339,7 @@ function wrapLiteral(typestr, check, thrw) {
         isNullable: false,
         isNonNullable: false
     }
-    let raw = "";
+    let raw = ""
     if(typestr[0] == '?') {
         typestr = typestr.substring(1).trimStart()
         flags.isNullable=true
@@ -348,7 +348,7 @@ function wrapLiteral(typestr, check, thrw) {
         const othrow = thrw
         thrw = (v, env) => {
             const ret = othrow(v,env)
-            return ret? ret + " & != null":undefined
+            return v == null?undefined:ret? ret + " & != null":undefined
         }
         raw += "?"
     } else if(typestr[0] == '!') {
@@ -402,9 +402,9 @@ function wrapLiteral(typestr, check, thrw) {
 function parseWrappedLiteral(typestr) {
     let {restStr: t, check, throw: thrw, raw} = parseLiteral(typestr)
     typestr = t.trimStart()
-    const ret = wrapLiteral(typestr, check, thrw);
-    ret.raw = raw + ret.raw;
-    return ret;
+    const ret = wrapLiteral(typestr, check, thrw)
+    ret.raw = raw + ret.raw
+    return ret
 }
 /**
  * 
@@ -422,7 +422,7 @@ function inferType(typestr) {
          * @type {(v: any, env: typeEnvironment) => boolean}
          */
         let check = () => true
-        let raw;
+        let raw
         if(typestr.startsWith('extends')) {
             typestr = typestr.substring(7).trimStart()
             const t = parseWrappedLiteral(typestr)
@@ -445,47 +445,22 @@ function inferType(typestr) {
     }
     return parseWrappedLiteral(typestr)
 }
+
 /**
  * 
  * @param {String} typestr
  * @returns {typecomp}
  */
-function parseType(typestr) {
-    let and = false
+function parseIntersection(typestr) {
     const next = [
         inferType(typestr)
-    ];
+    ]
     if(!next[0]) throw 'TS IGNORE'
     typestr = next[0].restStr.trimStart()
     let raw = next[0].raw
-    if(typestr[0] == '|') {
-        while(typestr[0] == '|') {
-            typestr = typestr.substring(1).trimStart()
-            and = false;
-            next.push(inferType(typestr))
-            //@ts-ignore
-            typestr = next[next.length-1].restStr.trimStart()
-            raw += " | " + next[next.length-1]?.raw.trimStart()
-        }
-        return {
-            restStr: typestr,
-            check: (v, env) => next.some(a => a.check(v, env)),
-            throw: (v, env) => {
-                const ret = [];
-                for(let x = 0; x < next.length; x++) {
-                    let p = next[x]?.throw(v, env)
-                    if(!p) return;
-                    ret.push(p)
-                }
-                if(ret.length == 1) return ret[0]
-                return `(${ret.map(v => v.trimStart()).join(" & ")})`
-            },
-            raw
-        }
-    } else if(typestr[0] == '&') {
-        and = true
+    if(typestr[0] == '&') {
         while(typestr[0] == '&') {
-            typestr = typestr.substring(1).trimStart();
+            typestr = typestr.substring(1).trimStart()
             next.push(inferType(typestr))
             //@ts-ignore
             typestr = next[next.length-1].restStr.trimStart()
@@ -500,8 +475,46 @@ function parseType(typestr) {
                     return ret[0]
                 }
                 if(ret.length > 1) {
-                    return `(${ret.map(v => v.trimStart()).join(" | ")})`
+                    return `(${ret.map(v => v?.trimStart()).join(" | ")})`
                 }
+            },
+            raw
+        }
+    }
+    return next[0]
+}
+/**
+ * 
+ * @param {String} typestr
+ * @returns {typecomp}
+ */
+function parseType(typestr) {
+    const next = [
+        parseIntersection(typestr)
+    ]
+    if(!next[0]) throw 'TS IGNORE'
+    typestr = next[0].restStr.trimStart()
+    let raw = next[0].raw
+    if(typestr[0] == '|') {
+        while(typestr[0] == '|') {
+            typestr = typestr.substring(1).trimStart()
+            next.push(parseIntersection(typestr))
+            //@ts-ignore
+            typestr = next[next.length-1].restStr.trimStart()
+            raw += " | " + next[next.length-1]?.raw.trimStart()
+        }
+        return {
+            restStr: typestr,
+            check: (v, env) => next.some(a => a.check(v, env)),
+            throw: (v, env) => {
+                const ret = []
+                for(let x = 0; x < next.length; x++) {
+                    let p = next[x]?.throw(v, env)
+                    if(!p) return
+                    ret.push(p)
+                }
+                if(ret.length == 1) return ret[0]
+                return `(${ret.map(v => v.trimStart()).join(" & ")})`
             },
             raw
         }

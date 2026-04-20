@@ -16,31 +16,34 @@ const createEnvironemt = (types = defaultTypes) => ({
     infertypes: {},
     cache: {},
     check(str) {
-        const t = parseType(str)
-        return (value) => t.check(value, this)
+        return this.parseType(str).check
     },
     throw(str) {
-        const t = parseType(str)
-        return (value) => {
-            if(!t.check(value, this)) throw TypeError("value: '" + inspect(value, false, null, false) + "' is " + t.throw(value, this))
-        }
+        return this.parseType(str).throw
     },
     parseType(str, name, ...paramNames) {
-        if(this.cache[str]) return this.cache[str];
-        let t 
+        if(this.cache[str] && !name) return this.cache[str]
+        let t
         if(this.types[str]) {
-            t = this.types[str];
+            t = this.types[str]
         } else {
             t = parseType(str)
         }
-        const ret = this.cache[str] = {
+        const p = this
+        const ret = {
             params: paramNames,
             check: (v) => t.check(v, p),
-            throw: (v) => t.throw(v, p)
+            throw: (v) => {
+                if(!t.check(v, this)) throw TypeError("value: '" + inspect(v, false, null, false) + "' has the following problems: " + t.throw(v, p)?.trimStart())
+            }
         }
-        const p = this
+        if(ret.params.length == 0) this.cache[str] = ret
         if(name) {
-            this.types[name] = ret
+            this.types[name] = {
+                params: paramNames,
+                check: t.check,
+                throw: t.throw
+            }
         }
         return ret
     }
